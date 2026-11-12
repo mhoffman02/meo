@@ -1781,7 +1781,18 @@ async function handleSaveImageFromClipboard(
       await vscode.workspace.fs.createDirectory(assetsFolderUri);
     }
 
-    const filePath = vscode.Uri.joinPath(assetsFolderUri, message.fileName);
+    const sanitizedFileName = path.basename(message.fileName.trim());
+    if (!sanitizedFileName || sanitizedFileName === '.' || sanitizedFileName === '..') {
+      throw new Error('Invalid image file name');
+    }
+
+    const filePath = vscode.Uri.joinPath(assetsFolderUri, sanitizedFileName);
+    const normalizedAssetsPath = path.resolve(assetsFolderUri.fsPath);
+    const normalizedFilePath = path.resolve(filePath.fsPath);
+    if (!normalizedFilePath.startsWith(normalizedAssetsPath + path.sep)) {
+      throw new Error('Image destination path escapes assets folder');
+    }
+
     await vscode.workspace.fs.writeFile(filePath, imageBuffer);
 
     const relativePath = path.relative(path.dirname(documentUri.fsPath), filePath.fsPath);
